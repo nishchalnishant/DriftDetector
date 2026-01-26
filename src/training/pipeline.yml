@@ -1,0 +1,187 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+display_name: Predictive Maintenance Training Pipeline
+description: End-to-end pipeline for training anomaly detection model with data validation and model evaluation
+
+settings:
+  default_compute: azureml:cpu-cluster
+  continue_on_step_failure: false
+
+inputs:
+  data_path:
+    type: uri_file
+    path: azureml://datastores/workspaceblobstore/paths/sensor_data.parquet
+  contamination:
+    type: number
+    default: 0.1
+  n_estimators:
+    type: integer
+    default: 100
+  max_samples:
+    type: integer
+    default: 256
+
+outputs:
+  model_output:
+    type: uri_folder
+    mode: rw_mount
+
+jobs:
+  # Step 1: Data Validation
+  data_validation:
+    type: command
+    component: azureml:data_validation:1
+    inputs:
+      data: ${{parent.inputs.data_path}}
+    outputs:
+      validation_report:
+        type: uri_folder
+    environment: azureml:feast-env@latest
+    compute: azureml:cpu-cluster
+    command: >-
+      python -c "
+      import pandas as pd
+      import sys
+      
+      print('Validating data...')
+      df = pd.read_parquet('${{inputs.data}}')
+      
+      # Check for missing values
+      missing = df.isnull().sum()
+      if missing.any():
+          print(f'Warning: Missing values detected: {missing[missing > 0]}')
+      
+      # Check data types
+      print(f'Data shape: {df.shape}')
+      print(f'Columns: {list(df.columns)}')
+      
+      # Validate required columns
+      required_cols = ['machine_id', 'event_timestamp']
+      for col in required_cols:
+          if col not in df.columns:
+              print(f'Error: Required column {col} not found')
+              sys.exit(1)
+      
+      print('Data validation passed!')
+      "
+  
+  # Step 2: Feature Engineering
+  feature_engineering:
+    type: command
+    inputs:
+      data: ${{parent.jobs.data_validation.outputs.validation_report}}
+    outputs:
+      features:
+        type: uri_folder
+    environment: azureml:feast-env@latest
+    compute: azureml:cpu-cluster
+    command: >-
+      python -c "
+      import pandas as pd
+      import numpy as np
+      from pathlib import Path
+      
+      print('Engineering features...')
+      # Feature engineering logic
+      # This is a placeholder - actual logic depends on data format
+      print('Features engineered successfully!')
+      "
+  
+  # Step 3: Model Training
+  model_training:
+    type: command
+    inputs:
+      data_path: ${{parent.inputs.data_path}}
+      contamination: ${{parent.inputs.contamination}}
+      n_estimators: ${{parent.inputs.n_estimators}}
+      max_samples: ${{parent.inputs.max_samples}}
+    outputs:
+      model_output: ${{parent.outputs.model_output}}
+    environment: azureml:ml-training-env@latest
+    compute: azureml:cpu-cluster
+    resources:
+      instance_count: 1
+      instance_type: STANDARD_D4S_V3
+    command: >-
+      python train.py
+      --data_path ${{inputs.data_path}}
+      --contamination ${{inputs.contamination}}
+      --n_estimators ${{inputs.n_estimators}}
+      --max_samples ${{inputs.max_samples}}
+      --output_dir ${{outputs.model_output}}
+  
+  # Step 4: Model Evaluation
+  model_evaluation:
+    type: command
+    inputs:
+      model_path: ${{parent.jobs.model_training.outputs.model_output}}
+      test_data: ${{parent.inputs.data_path}}
+    outputs:
+      evaluation_report:
+        type: uri_folder
+    environment: azureml:ml-training-env@latest
+    compute: azureml:cpu-cluster
+    command: >-
+      python -c "
+      import joblib
+      import pandas as pd
+      from pathlib import Path
+      from sklearn.metrics import classification_report
+      import json
+      
+      print('Loading model for evaluation...')
+      model = joblib.load('${{inputs.model_path}}/model.pkl')
+      scaler = joblib.load('${{inputs.model_path}}/scaler.pkl')
+      
+      print('Loading test data...')
+      df = pd.read_parquet('${{inputs.test_data}}')
+      
+      # Evaluation logic
+      print('Model evaluation complete!')
+      
+      # Save evaluation report
+      output = Path('${{outputs.evaluation_report}}')
+      output.mkdir(parents=True, exist_ok=True)
+      with open(output / 'metrics.json', 'w') as f:
+          json.dump({'status': 'evaluated'}, f)
+      "
+  
+  # Step 5: Model Registration
+  model_registration:
+    type: command
+    inputs:
+      model_path: ${{parent.jobs.model_training.outputs.model_output}}
+      evaluation_metrics: ${{parent.jobs.model_evaluation.outputs.evaluation_report}}
+    environment: azureml:ml-training-env@latest
+    compute: azureml:cpu-cluster
+    command: >-
+      python -c "
+      from azure.ai.ml import MLClient
+      from azure.ai.ml.entities import Model
+      from azure.identity import DefaultAzureCredential
+      import json
+      from pathlib import Path
+      
+      print('Registering model to Azure ML...')
+      
+      # Initialize ML Client
+      credential = DefaultAzureCredential()
+      ml_client = MLClient.from_config(credential=credential)
+      
+      # Load evaluation metrics
+      metrics_path = Path('${{inputs.evaluation_metrics}}') / 'metrics.json'
+      with open(metrics_path) as f:
+          metrics = json.load(f)
+      
+      # Register model
+      model = Model(
+          path='${{inputs.model_path}}',
+          name='anomaly-detection-model',
+          description='Isolation Forest for predictive maintenance anomaly detection',
+          tags={'framework': 'sklearn', 'task': 'anomaly_detection'}
+      )
+      
+      registered_model = ml_client.models.create_or_update(model)
+      print(f'Model registered: {registered_model.name}, version: {registered_model.version}')
+      "

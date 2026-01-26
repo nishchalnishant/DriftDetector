@@ -1,0 +1,21 @@
+project: pred_maint_features
+provider: local
+registry:
+  registry_type: sql
+  path: feast_registry.db
+  cache_ttl_seconds: 60
+
+online_store:
+  type: redis
+  connection_string: ${FEAST_REDIS_CONNECTION_STRING}
+  key_ttl_seconds: 86400
+
+offline_store:
+  type: file
+  path: data/offline
+
+entity_key_serialization_version: 2
+
+flags:
+  alpha_features: true
+  feature_logging: true

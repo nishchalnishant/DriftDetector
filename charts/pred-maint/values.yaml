@@ -1,0 +1,151 @@
+# Default values for pred-maint deployment
+
+replicaCount: 3
+
+image:
+  repository: acrpredmaintprod.azurecr.io/pred-maint
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets:
+  - name: acr-secret
+
+nameOverride: ""
+fullnameOverride: "pred-maint"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "pred-maint-sa"
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+  annotations: {}
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: pred-maint.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: pred-maint-tls
+      hosts:
+        - pred-maint.example.com
+
+resources:
+  # Main inference container
+  inference:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  # Drift detection sidecar
+  drift:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - pred-maint
+          topologyKey: kubernetes.io/hostname
+
+# Environment variables
+env:
+  MODEL_NAME: "anomaly-detection-model"
+  MODEL_VERSION: "latest"
+  DRIFT_THRESHOLD: "0.3"
+  DRIFT_WINDOW_SIZE: "1000"
+  LOG_LEVEL: "INFO"
+
+# ConfigMap and Secret references
+configMap:
+  name: pred-maint-config
+
+secret:
+  name: pred-maint-secrets
+
+# Volume mounts
+volumes:
+  - name: logs
+    emptyDir: {}
+  - name: models
+    emptyDir: {}
+  - name: data
+    emptyDir: {}
+
+volumeMounts:
+  - name: logs
+    mountPath: /app/logs
+  - name: models
+    mountPath: /app/models
+  - name: data
+    mountPath: /app/data
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3

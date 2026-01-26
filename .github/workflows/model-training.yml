@@ -1,0 +1,135 @@
+name: Model Training Pipeline
+
+on:
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      contamination:
+        description: 'Contamination factor for Isolation Forest'
+        required: false
+        default: '0.1'
+      n_estimators:
+        description: 'Number of estimators'
+        required: false
+        default: '100'
+  repository_dispatch:
+    types: [drift-detected]
+
+env:
+  AZUREML_WORKSPACE_NAME: ${{ secrets.AZUREML_WORKSPACE_NAME  }}
+  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+
+jobs:
+  trigger-training:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Azure ML CLI
+        run: |
+          pip install azure-ai-ml azure-identity
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Submit Training Job
+        run: |
+          python -c "
+          from azure.ai.ml import MLClient
+          from azure.ai.ml import load_job
+          from azure.identity import DefaultAzureCredential
+          
+          credential = DefaultAzureCredential()
+          ml_client = MLClient(
+              credential=credential,
+              subscription_id='${{ secrets.AZURE_SUBSCRIPTION_ID }}',
+              resource_group_name='${{ env.RESOURCE_GROUP }}',
+              workspace_name='${{ env.AZUREML_WORKSPACE_NAME }}'
+          )
+          
+          # Load and submit pipeline
+          pipeline_job = load_job('src/training/pipeline.yml')
+          
+          # Override parameters if provided
+          if '${{ github.event.inputs.contamination }}':
+              pipeline_job.inputs.contamination = float('${{ github.event.inputs.contamination }}')
+          if '${{ github.event.inputs.n_estimators }}':
+              pipeline_job.inputs.n_estimators = int('${{ github.event.inputs.n_estimators }}')
+          
+          # Submit job
+          job = ml_client.jobs.create_or_update(pipeline_job)
+          print(f'Submitted job: {job.name}')
+          print(f'Job URL: {job.services[\"Studio\"].endpoint}')
+          "
+      
+      - name: Wait for Training Completion
+        run: |
+          python -c "
+          from azure.ai.ml import MLClient
+          from azure.identity import DefaultAzureCredential
+          import time
+          
+          credential = DefaultAzureCredential()
+          ml_client = MLClient(
+              credential=credential,
+              subscription_id='${{ secrets.AZURE_SUBSCRIPTION_ID }}',
+              resource_group_name='${{ env.RESOURCE_GROUP }}',
+              workspace_name='${{ env.AZUREML_WORKSPACE_NAME }}'
+          )
+          
+          # Poll for completion (max 2 hours)
+          max_wait = 7200
+          start_time = time.time()
+          
+          while time.time() - start_time < max_wait:
+              jobs = list(ml_client.jobs.list(max_results=1))
+              if jobs:
+                  job = jobs[0]
+                  print(f'Job status: {job.status}')
+                  
+                  if job.status in ['Completed', 'Failed', 'Canceled']:
+                      if job.status == 'Completed':
+                          print('✅ Training completed successfully')
+                          break
+                      else:
+                          print(f'❌ Training {job.status}')
+                          exit(1)
+              
+              time.sleep(60)
+          "
+      
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Training pipeline failed. Check Azure ML Studio for details."
+
+  deploy-model:
+    needs: trigger-training
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Trigger Application Redeployment
+        run: |
+          # Trigger build-deploy workflow to pick up new model
+          gh workflow run build-deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

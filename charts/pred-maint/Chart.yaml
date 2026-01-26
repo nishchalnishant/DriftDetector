@@ -1,0 +1,14 @@
+apiVersion: v2
+name: pred-maint
+description: Helm chart for Predictive Maintenance with Drift Detection
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: MLOps Team
+    email: mlops@company.com
+keywords:
+  - machine-learning
+  - mlops
+  - predictive-maintenance
+  - drift-detection
