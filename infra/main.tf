@@ -12,10 +12,14 @@ terraform {
     }
   }
   
-  backend "azurerm" {
-    # State will be stored in Azure Storage Account
-    # Configure via environment variables or backend config file
-  }
+  # backend "azurerm" {
+  #   # State will be stored in Azure Storage Account
+  #   # Configure via environment variables or backend config file
+  # }
+  
+  # Using local backend for initial setup
+  # Uncomment the azurerm backend above and run 'terraform init -migrate-state'
+  # after creating a storage account for remote state
 }
 
 provider "azurerm" {
