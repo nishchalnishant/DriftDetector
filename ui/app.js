@@ -155,15 +155,16 @@ async function handlePrediction(e) {
 
         // Update state
         appState.predictionCount++;
-        if (result.is_anomaly) {
-            appState.anomalyCount++;
-        }
 
-        // Add to history
+        // Track accuracy (updated from backend stats)
+        const accuracyPercent = Math.round(result.forecast_accuracy * 100);
+        document.getElementById('accuracyValue').textContent = `${accuracyPercent}%`;
+
+        // Add to history (accuracy-based)
         appState.predictionHistory.push({
             timestamp: new Date(),
-            score: result.anomaly_score,
-            isAnomaly: result.is_anomaly,
+            score: result.forecast_accuracy,  // Use accuracy instead of anomaly score
+            needsRetraining: result.needs_retraining,
             confidence: result.confidence
         });
 
