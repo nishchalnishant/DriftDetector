@@ -217,8 +217,9 @@ cd ..
 ### Step 6: Configure Azure Container Registry
 
 ```bash
-# Get ACR login server
-ACR_NAME=$(terraform output -raw acr_name -state=infra/terraform.tfstate)
+# Get ACR name directly from Azure (works with manual deployment)
+ACR_NAME=$(az acr list --resource-group rg-pred-maint-prod --query "[0].name" -o tsv)
+echo "ACR Name: $ACR_NAME"
 
 # Login to ACR
 az acr login --name $ACR_NAME
@@ -228,6 +229,20 @@ az acr repository list --name $ACR_NAME --output table
 ```
 
 **Expected Output:** `Login Succeeded`
+
+**Alternative - Set all variables at once:**
+```bash
+# If you deployed manually, set these variables:
+export ACR_NAME="acrpredmaintprod"
+export AKS_CLUSTER_NAME="aks-pred-maint-prod"
+export RESOURCE_GROUP="rg-pred-maint-prod"
+export AZUREML_WORKSPACE_NAME="mlw-pred-maint-prod"
+
+# Verify they're set
+echo "ACR: $ACR_NAME"
+echo "AKS: $AKS_CLUSTER_NAME"
+```
+
 
 ---
 
@@ -263,12 +278,12 @@ cd features
 # Update feature_store.yaml with Redis connection
 # Get Redis connection details
 REDIS_HOST=$(az redis show \
-  --name redis-pred-maint-prod \
+  --name redis-feast-prod \
   --resource-group rg-pred-maint-prod \
   --query hostName -o tsv)
 
 REDIS_KEY=$(az redis list-keys \
-  --name redis-pred-maint-prod \
+  --name redis-feast-prod \
   --resource-group rg-pred-maint-prod \
   --query primaryKey -o tsv)
 
@@ -531,7 +546,7 @@ curl http://$SERVICE_IP/metrics | grep inference_requests_total
 | `AZURE_SUBSCRIPTION_ID` | Your subscription ID | `az account show --query id -o tsv` |
 | `RESOURCE_GROUP` | `rg-pred-maint-prod` | From your .env file |
 | `AKS_CLUSTER_NAME` | `aks-pred-maint-prod` | From your .env file |
-| `ACR_NAME` | ACR name | `$(terraform output -raw acr_name -state=infra/terraform.tfstate)` |
+| `ACR_NAME` | ACR name | `az acr list --resource-group rg-pred-maint-prod --query "[0].name" -o tsv` |
 | `ACR_USERNAME` | ACR admin username | `az acr credential show --name $ACR_NAME --query username -o tsv` |
 | `ACR_PASSWORD` | ACR admin password | `az acr credential show --name $ACR_NAME --query passwords[0].value -o tsv` |
 | `AZUREML_WORKSPACE_NAME` | `mlw-pred-maint-prod` | From your .env file |
