@@ -105,9 +105,9 @@ python -m http.server 8080
    - Prediction countsanoaly counts
 
 2. **Prediction Interface**
-   - Input: Machine ID, Vibration, Temperature, RPM, Torque, Tool Wear
-   - Output: Anomaly prediction with confidence score
-   - Visual result cards (green=normal, red=anomaly)
+   - Input: Location, Temperature, Pressure, Humidity, Wind Speed
+   - Output: Drift detection with confidence score
+   - Visual result cards (green=normal, red=anomaly detected)
 
 3. **Interactive Chart**
    - Last 20 predictions plotted
@@ -149,4 +149,24 @@ ui/
 
 ---
 
-**Status**: ✅ Ready for deployment!
+## 🎉 Deployment Status
+
+**Status**: ✅ Deployed!
+
+- **Committed**: January 28, 2026
+- **Pushed to GitHub**: main branch
+- **GitHub Actions**: Workflow triggered automatically
+- **Azure Static Web Apps**: Deploying via CI/CD
+
+### Check Deployment Status
+
+Visit: https://github.com/nishchalnishant/DriftDetector/actions
+
+Once deployed, your UI will be available at:
+- **Azure URL**: `https://<your-app-name>.azurestaticapps.net`
+
+### Required GitHub Secret
+
+Make sure you have set up the following GitHub secret:
+- `AZURE_STATIC_WEB_APPS_API_TOKEN` - Get this from Azure Portal → Static Web App → Manage deployment token
+
