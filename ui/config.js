@@ -28,3 +28,4 @@ function getEndpointURL(service, endpoint) {
     const baseURL = service === 'drift' ? API_CONFIG.DRIFT_API : API_CONFIG.INFERENCE_API;
     return `${baseURL}${API_CONFIG.ENDPOINTS[endpoint]}`;
 }
+ 
