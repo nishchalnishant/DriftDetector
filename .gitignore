@@ -87,3 +87,32 @@ serviceaccount.json
 *.zip
 charts/pred-maint/charts/
 charts/pred-maint/*.tgz
+
+# Data files
+data/
+*.csv
+*.json
+*.parquet
+*.feather
+
+# Model files
+*.onnx
+*.pkl
+*.joblib
+*.h5
+*.pb
+*.pth
+*.pt
+models/
+artifacts/
+
+# Generated files
+generate_data.py
+terraform-outputs.json
+
+# Duplicate directories
+DriftDetector/
+
+# Documentation that shouldn't be tracked
+ERROR_LOG.md
+interview.md
