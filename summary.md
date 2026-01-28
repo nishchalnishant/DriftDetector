@@ -2,19 +2,20 @@
 
 ## 📋 Project Overview
 
-**DriftDetector** is a production-grade MLOps system for predictive maintenance that implements an end-to-end pipeline with automated drift detection and model retraining capabilities on Azure ML. The project demonstrates modern MLOps best practices including Infrastructure as Code, feature stores, automated monitoring, and continuous deployment.
+**DriftDetector** is a production-grade MLOps system for weather forecasting that implements an end-to-end pipeline with automated model retraining when predictions fail. The project demonstrates modern MLOps best practices including Infrastructure as Code, automated monitoring, and continuous deployment.
 
-**Project Name:** `azure-pred-maint-ops`  
+**Project Name:** `DriftDetector`  
 **Version:** 0.1.0  
 **License:** MIT  
 
 ## 🎯 Core Objective
 
-Build a complete predictive maintenance system that:
-- Ingests real-time sensor data (temperature, vibration, rotational speed)
-- Detects anomalies using machine learning models
-- Monitors for data drift and triggers automated retraining
-- Deploys at scale on Azure with full observability
+Build a complete weather forecasting system that:
+- Fetches live weather data from OpenWeatherMap API hourly
+- Trains ML models to predict future weather conditions
+- Compares predictions against actual weather data
+- Automatically retrains the model on all historical data when prediction accuracy drops
+- Deploys updated models automatically
 
 ## 🏗️ System Architecture
 

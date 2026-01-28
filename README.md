@@ -1,21 +1,21 @@
-# Predictive Maintenance with Edge-to-Cloud Drift Detection
+# Weather Forecasting with Auto-Retraining on Prediction Failures
 
-[![Build Status](https://github.com/yourusername/DriftDetector/workflows/Build%20and%20Deploy/badge.svg)](https://github.com/yourusername/DriftDetector/actions)
-[![Infrastructure](https://github.com/yourusername/DriftDetector/workflows/Deploy%20Infrastructure/badge.svg)](https://github.com/yourusername/DriftDetector/actions)
+[![Build Status](https://github.com/nishchalnishant/DriftDetector/workflows/Build%20and%20Deploy/badge.svg)](https://github.com/nishchalnishant/DriftDetector/actions)
+[![UI Deployment](https://github.com/nishchalnishant/DriftDetector/workflows/Deploy%20UI%20to%20GitHub%20Pages/badge.svg)](https://github.com/nishchalnishant/DriftDetector/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Production-grade MLOps system for predictive maintenance with automated drift detection and model retraining on Azure ML**
+> **Production-grade MLOps system for weather forecasting with automatic model retraining when predictions fail**
 
 ## 🎯 Overview
 
-This project implements an end-to-end MLOps pipeline for predictive maintenance that:
+This project implements an end-to-end MLOps pipeline for weather forecasting that:
 
-- **Detects anomalies** in real-time sensor data using Isolation Forest
-- **Monitors data drift** using Evidently AI with Wasserstein distance
-- **Triggers automated retraining** when drift exceeds configurable thresholds
-- **Deploys at scale** on Azure Kubernetes Service with auto-scaling
-- **Serves features** via Feast with Redis backend for low-latency inference
-- **Tracks experiments** in Azure ML with MLflow integration
+- **Fetches live weather data** hourly from OpenWeatherMap API
+- **Trains ML models** to predict future weather conditions
+- **Validates predictions** against actual weather data
+- **Detects prediction failures** when forecast accuracy drops below threshold
+- **Automatically retrains** the model on all accumulated historical data
+- **Deploys updated models** seamlessly for improved accuracy
 
 ### Key Features
 
