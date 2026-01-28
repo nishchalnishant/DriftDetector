@@ -97,7 +97,7 @@
                     </div>
                     <div>
                         <h1 class="text-3xl font-bold">DriftDetector</h1>
-                        <p class="text-white/80">Weather Data Drift Detection & Auto-Retraining</p>
+                        <p class="text-white/80">Weather Forecasting with Auto-Retraining</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
@@ -112,6 +112,22 @@
     </header>
 
     <main class="container mx-auto px-6 py-8">
+        <!-- Explanation Banner -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6 mb-8">
+            <div class="flex items-start gap-4">
+                <div class="bg-blue-100 rounded-lg p-2">
+                    <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-blue-900 mb-2">How It Works</h3>
+                    <p class="text-blue-800 text-sm">
+                        This system predicts weather conditions and automatically retrains the model when predictions
+                        become inaccurate.
+                        Enter weather data below to test the forecast accuracy.
+                    </p>
+                </div>
+            </div>
+        </div>
         <!-- Status Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-md p-6 card-hover">
@@ -148,12 +164,12 @@
 
             <div class="bg-white rounded-xl shadow-md p-6 card-hover">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="bg-red-100 rounded-lg p-3">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    <div class="bg-yellow-100 rounded-lg p-3">
+                        <i class="fas fa-percentage text-yellow-600 text-2xl"></i>
                     </div>
                 </div>
-                <h3 class="text-gray-500 text-sm font-medium mb-1">Anomalies</h3>
-                <p id="anomalyCount" class="text-2xl font-bold text-gray-800">0</p>
+                <h3 class="text-gray-500 text-sm font-medium mb-1">Accuracy</h3>
+                <p id="accuracyValue" class="text-2xl font-bold text-gray-800">--</p>
             </div>
         </div>
 
@@ -204,7 +220,7 @@
                     <button type="submit" id="predictBtn"
                         class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                         <i class="fas fa-cloud-sun mr-2"></i>
-                        Check for Drift
+                        Get Weather Forecast
                     </button>
                 </form>
             </div>
