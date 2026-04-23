@@ -13,7 +13,7 @@ variable "environment" {
 variable "location" {
   description = "Azure region for resources"
   type        = string
-  default     = "westus2"
+  default     = "centralindia"  # Changed from westus2 to comply with Azure for Students policy
 }
 
 variable "resource_group_name" {

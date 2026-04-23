@@ -23,6 +23,9 @@ terraform {
 }
 
 provider "azurerm" {
+  # Skip automatic provider registration for Azure for Students subscription
+  skip_provider_registration = true
+  
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
