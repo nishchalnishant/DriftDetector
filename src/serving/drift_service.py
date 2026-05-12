@@ -1,30 +1,33 @@
 """
-Evidently AI Drift Detection Service
+Drift Detection Service for Predictive Maintenance
 
-This sidecar service:
-1. Collects inference logs from the main application
-2. Calculates data drift metrics using Evidently AI
-3. Exposes metrics for Prometheus
-4. Triggers alerts when drift exceeds threshold
+This service monitors model drift using Evidently AI and provides
+real-time drift detection capabilities.
 """
 
-import json
+import asyncio
 import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Optional
 
+import numpy as np
 import pandas as pd
 import uvicorn
-from evidently import ColumnMapping
-from evidently.metric_preset import DataDriftPreset
-from evidently.report import Report
-from evidently.metrics import DataDriftTable, DatasetDriftMetric
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from prometheus_client import Gauge, Counter, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
 from pydantic import BaseModel
+
+try:
+    from evidently.metrics import DataDriftTable, DatasetDriftMetric
+    from evidently.report import Report
+    EVIDENTLY_AVAILABLE = True
+except ImportError:
+    EVIDENTLY_AVAILABLE = False
+    print("⚠️ Evidently not available - drift detection disabled")
+
 
 # ===========================
 # Configuration
@@ -40,20 +43,27 @@ CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "300"))
 # Prometheus Metrics
 # ===========================
 
+# Use a custom registry to avoid conflicts on restarts
+from prometheus_client import CollectorRegistry
+metrics_registry = CollectorRegistry()
+
 DRIFT_SCORE_GAUGE = Gauge(
     "data_drift_score",
     "Overall data drift score",
-    ["feature"]
+    ["feature"],
+    registry=metrics_registry
 )
 
 DRIFT_DETECTED_COUNTER = Counter(
     "drift_detections_total",
-    "Total number of drift detections"
+    "Total number of drift detections",
+    registry=metrics_registry
 )
 
 FEATURES_DRIFTED_GAUGE = Gauge(
     "features_with_drift",
-    "Number of features experiencing drift"
+    "Number of features experiencing drift",
+    registry=metrics_registry
 )
 
 # ===========================
@@ -259,7 +269,7 @@ async def get_latest_drift():
 async def metrics():
     """Prometheus metrics endpoint"""
     
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return Response(content=generate_latest(metrics_registry), media_type=CONTENT_TYPE_LATEST)
 
 
 # ===========================

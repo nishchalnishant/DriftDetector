@@ -1,8 +1,8 @@
 // API Configuration
 const API_CONFIG = {
-    // Azure Production Backend
-    INFERENCE_API: 'http://4.187.158.249',
-    DRIFT_API: 'http://4.187.158.249',
+    // Local Weather Forecast API
+    INFERENCE_API: 'http://localhost:8000',
+    DRIFT_API: 'http://localhost:8000',
 
     // Endpoints
     ENDPOINTS: {

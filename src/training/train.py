@@ -19,9 +19,23 @@ import mlflow
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
-from azure.ai.ml import MLClient
-from azure.identity import DefaultAzureCredential
-from feast import FeatureStore
+
+# Optional Azure SDK imports (only needed for Azure ML integration)
+try:
+    from azure.ai.ml import MLClient
+    from azure.identity import DefaultAzureCredential
+    AZURE_AVAILABLE = True
+except ImportError:
+    AZURE_AVAILABLE = False
+    print("⚠️  Azure SDK not available - running in local mode")
+
+try:
+    from feast import FeatureStore
+    FEAST_AVAILABLE = True
+except ImportError:
+    FEAST_AVAILABLE = False
+    print("⚠️  Feast not available - skipping feature store integration")
+
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 from sklearn.model_selection import train_test_split
@@ -112,36 +126,30 @@ def load_features_from_feast(
 def prepare_data(data_path: str = None) -> Tuple[pd.DataFrame, pd.Series]:
     """Load and prepare training data from automated ingestion"""
     
-    # Import data ingestion pipeline
-    import sys
-    sys.path.append(str(Path(__file__).parent.parent))
-    from data.ingestion import DataIngestionPipeline
-    
     # Check if processed data already exists
     processed_path = Path("data/processed/train_data.parquet")
     
-    if processed_path.exists() and data_path is None:
-        print(f"Loading existing processed data from {processed_path}...")
-        df = pd.read_parquet(processed_path)
-    else:
-        # Run automated data ingestion
-        print("Running automated data ingestion from public datasets...")
-        pipeline = DataIngestionPipeline()
-        train_df, test_df = pipeline.prepare_training_data(save_to_disk=True)
-        df = train_df
+    if not processed_path.exists():
+        raise FileNotFoundError(
+            f"Training data not found at {processed_path}. "
+            f"Please run 'python3 generate_data.py' first to create training data."
+        )
+    
+    print(f"Loading existing processed data from {processed_path}...")
+    df = pd.read_parquet(processed_path)
     
     # Remove missing values
     df = df.dropna()
     
     # Get feature columns
-    feature_cols = [col for col in df.columns if col not in ['machine_id', 'event_timestamp', 'created_timestamp', 'is_anomaly', 'model', 'age']]
+    feature_cols = [col for col in df.columns if col not in ['machine_id', 'event_timestamp', 'created_timestamp', 'is_anomaly', 'model', 'age', 'location']]
     X = df[feature_cols]
     
     # If labels exist, use them for evaluation
     y = df['is_anomaly'] if 'is_anomaly' in df.columns else None
     
     print(f"Prepared {len(X)} samples with {len(feature_cols)} features")
-    print(f"Feature columns: {feature_cols[:5]}...")
+    print(f"Feature columns: {list(feature_cols[:5])}...")
     
     if y is not None:
         print(f"Label distribution: {y.value_counts().to_dict()}")
@@ -246,7 +254,7 @@ def export_to_onnx(
     onnx_model = convert_sklearn(
         pipeline,
         initial_types=initial_type,
-        target_opset=12
+        target_opset={'': 12, 'ai.onnx.ml': 3}  # Specify ML domain version
     )
     
     # Save ONNX model

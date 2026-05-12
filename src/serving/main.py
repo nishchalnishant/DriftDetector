@@ -14,7 +14,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import joblib
 import numpy as np
 import onnxruntime as rt
 import uvicorn
@@ -25,7 +24,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from feast import FeatureStore
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
-import pandas as pd
 
 from models import (
     SensorDataInput,
@@ -50,21 +48,28 @@ LOG_DIR = Path(os.getenv("LOG_DIR", "/app/logs"))
 # Prometheus Metrics
 # ===========================
 
+# Use a custom registry to avoid conflicts on restarts
+from prometheus_client import CollectorRegistry
+metrics_registry = CollectorRegistry()
+
 REQUEST_COUNT = Counter(
     "inference_requests_total",
     "Total number of inference requests",
-    ["endpoint", "status"]
+    ["endpoint", "status"],
+    registry=metrics_registry
 )
 
 REQUEST_LATENCY = Histogram(
     "inference_request_duration_seconds",
     "Inference request latency in seconds",
-    ["endpoint"]
+    ["endpoint"],
+    registry=metrics_registry
 )
 
 ANOMALY_COUNT = Counter(
     "anomalies_detected_total",
-    "Total number of anomalies detected"
+    "Total number of anomalies detected",
+    registry=metrics_registry
 )
 
 # ===========================
@@ -295,7 +300,7 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
 async def metrics():
     """Prometheus metrics endpoint"""
     
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return Response(content=generate_latest(metrics_registry), media_type=CONTENT_TYPE_LATEST)
 
 
 # ===========================

@@ -1,7 +1,6 @@
 // State management
 const appState = {
     predictionHistory: [],
-    anomalyCount: 0,
     predictionCount: 0,
     healthStatus: null,
     driftStatus: null
@@ -191,7 +190,7 @@ async function handlePrediction(e) {
 // Update prediction counts
 function updatePredictionCounts() {
     document.getElementById('predictionCount').textContent = appState.predictionCount;
-    document.getElementById('anomalyCount').textContent = appState.anomalyCount;
+    // Accuracy is updated directly in handlePrediction function
 }
 
 // Display prediction result
@@ -199,38 +198,40 @@ function displayResult(result, input) {
     const resultCard = document.getElementById('resultCard');
     const resultContent = document.getElementById('resultContent');
 
-    const anomalyClass = result.is_anomaly ? 'anomaly-detected' : 'anomaly-normal';
-    const anomalyIcon = result.is_anomaly ? 'fa-exclamation-triangle' : 'fa-check-circle';
-    const anomalyColor = result.is_anomaly ? 'text-red-600' : 'text-green-600';
-    const anomalyBg = result.is_anomaly ? 'bg-red-100' : 'bg-green-100';
-    const anomalyText = result.is_anomaly ? 'ANOMALY DETECTED' : 'NORMAL OPERATION';
+    const accuracyPercent = (result.forecast_accuracy * 100).toFixed(1);
+    const isAccurate = result.forecast_accuracy >= 0.7;
+    const statusClass = isAccurate ? 'anomaly-normal' : 'anomaly-detected';
+    const statusIcon = isAccurate ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    const statusColor = isAccurate ? 'text-green-600' : 'text-orange-600';
+    const statusBg = isAccurate ? 'bg-green-100' : 'bg-orange-100';
+    const statusText = isAccurate ? 'HIGH ACCURACY' : 'NEEDS RETRAINING';
 
     resultContent.innerHTML = `
-        <div class="anomaly-card ${anomalyClass} p-6 rounded-lg">
+        <div class="anomaly-card ${statusClass} p-6 rounded-lg">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="${anomalyBg} rounded-full p-3">
-                        <i class="fas ${anomalyIcon} ${anomalyColor} text-2xl"></i>
+                    <div class="${statusBg} rounded-full p-3">
+                        <i class="fas ${statusIcon} ${statusColor} text-2xl"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold ${anomalyColor}">${anomalyText}</h3>
-                        <p class="text-sm text-gray-500">Location: ${result.location || input.location}</p>
+                        <h3 class="text-lg font-bold ${statusColor}">${statusText}</h3>
+                        <p class="text-sm text-gray-500">📍 ${result.location || input.location}</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-bold ${anomalyColor}">${(result.confidence * 100).toFixed(1)}%</p>
-                    <p class="text-xs text-gray-500">Confidence</p>
+                    <p class="text-2xl font-bold ${statusColor}">${accuracyPercent}%</p>
+                    <p class="text-xs text-gray-500">Forecast Accuracy</p>
                 </div>
             </div>
             
             <div class="grid grid-cols-2 gap-4 mb-4">
                 <div class="bg-gray-50 p-3 rounded-lg">
-                    <p class="text-xs text-gray-500">Anomaly Score</p>
-                    <p class="text-lg font-bold text-gray-800">${result.anomaly_score.toFixed(4)}</p>
+                    <p class="text-xs text-gray-500">Confidence</p>
+                    <p class="text-lg font-bold text-gray-800">${(result.confidence * 100).toFixed(1)}%</p>
                 </div>
                 <div class="bg-gray-50 p-3 rounded-lg">
                     <p class="text-xs text-gray-500">Model Version</p>
-                    <p class="text-lg font-bold text-gray-800">${result.model_version || 'v1'}</p>
+                    <p class="text-lg font-bold text-gray-800">${result.model_version || 'v1.0.0'}</p>
                 </div>
             </div>
             
